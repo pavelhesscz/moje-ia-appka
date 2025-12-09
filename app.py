@@ -11,7 +11,7 @@ except:
     st.error("Chybí API klíč! Nastav ho v Secrets na Streamlit Cloudu.")
 
 # Výběr modelu (zde používáme flash, je rychlý a zdarma)
-model = genai.GenerativeModel('gemini-1.5-flash-001')
+model = genai.GenerativeModel('gemini-pro')
 
 # Textové pole pro uživatele
 user_input = st.text_area("Na co se chceš zeptat?", height=150)
