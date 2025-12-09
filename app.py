@@ -54,7 +54,10 @@ if st.button("Odeslat dotaz"):
         with st.spinner('AI přemýšlí...'):
             try:
                 # Tady použijeme přesně to, co sis vybral v menu
-                model = genai.GenerativeModel(vybrany_model)
+                # Sem do uvozovek vlož ten svůj dlouhý text z AI Studia (System Instruction)
+                muj_prompt = "Jsi asistent, který odpovídá pouze ve verších."
+
+                model = genai.GenerativeModel(vybrany_model, system_instruction=muj_prompt)
                 response = model.generate_content(user_input)
                 
                 st.write("### Odpověď:")
