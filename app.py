@@ -11,52 +11,36 @@ except:
     st.error("Chybí API klíč! Nastav ho v Secrets.")
     st.stop()
 
-# 2. AUTOMATICKÉ HLEDÁNÍ MODELU (To opraví tvou chybu)
-@st.cache_resource
-def get_working_model():
-    try:
-        # Zeptáme se Googlu: "Co mám k dispozici?"
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                # Vrátíme první model, který umí psát text (bez "models/" na začátku)
-                return m.name
-    except Exception as e:
-        return None
+# 2. Nastavení modelu "natvrdo" na stabilní verzi zdarma
+# Pokud 1.5-flash nebude fungovat, zkusíme 'gemini-pro'
+try:
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    # Rychlý test, jestli model žije (ping)
+    response = model.generate_content("test", request_options={"timeout": 5})
+except:
+    # Záložní plán - starší model, pokud Flash stávkuje
+    st.warning("Přepínám na záložní model Gemini Pro...")
+    model = genai.GenerativeModel('gemini-pro')
 
-# Zjistíme název modelu
-model_name = get_working_model()
+st.success("✅ Připojeno k modelu.")
 
-if model_name:
-    # Pokud je v názvu 'models/', odstraníme to pro jistotu
-    if model_name.startswith("models/"):
-        final_name = model_name.split("/")[-1]
+# 3. Rozhraní aplikace
+user_input = st.text_area("Na co se chceš zeptat?", height=150)
+
+if st.button("Odeslat dotaz"):
+    if user_input:
+        with st.spinner('AI přemýšlí...'):
+            try:
+                response = model.generate_content(user_input)
+                st.write("### Odpověď:")
+                st.write(response.text)
+            except Exception as e:
+                # Pokud dojde k chybě 429 i tady, vypíšeme česky co dělat
+                if "429" in str(e):
+                    st.error("🛑 DOŠEL LIMIT ZDARMA (Error 429).")
+                    st.info("Řešení: V Google AI Studiu si vytvoř úplně nový Google účet a nový klíč, vyčerpal jsi denní příděl.")
+                else:
+                    st.error(f"Chyba: {e}")
     else:
-        final_name = model_name
-        
-    st.success(f"✅ Automaticky připojeno k modelu: **{final_name}**")
-    model = genai.GenerativeModel(final_name)
-
-    # 3. Samotná aplikace
-    user_input = st.text_area("Na co se chceš zeptat?", height=150)
-
-    if st.button("Odeslat dotaz"):
-        if user_input:
-            with st.spinner('AI přemýšlí...'):
-                try:
-                    response = model.generate_content(user_input)
-                    st.write("### Odpověď:")
-                    st.write(response.text)
-                except Exception as e:
-                    st.error(f"Chyba při generování: {e}")
-        else:
-            st.warning("Napřed musíš něco napsat.")
-
-else:
-    # Pokud script nenašel ŽÁDNÝ model
-    st.error("❌ Kritická chyba: Tvůj API klíč nevidí žádné modely.")
-    st.info("Tip: Jdi do AI Studia a vygeneruj si úplně nový klíč.")
-    # Pro jistotu vypíšeme detail chyby, pokud to půjde
-    try:
-        list(genai.list_models())
-    except Exception as e:
-        st.code(f"Detail chyby od Googlu: {e}")
+        st.warning("Napřed musíš něco napsat.")
